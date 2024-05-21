@@ -1,6 +1,8 @@
+import { Model } from "mongoose";
+
 export type UserName = {
   firstName: string;
-  middleName: string;
+  middleName?: string;
   lastName: string;
 };
 
@@ -20,15 +22,15 @@ export type LocalGuardian = {
   address: string;
 };
 
-export type Student = {
+export type TStudent = {
   id: string;
   name: UserName;
-  gender: 'male' | 'female';
-  dateOfBirth: string;
+  gender: 'male' | 'female' | 'other';
+  dateOfBirth?: string;
   email: string;
   contactNo: string;
   emergencyContactNo: string;
-  bloodGroup: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+  bloodGroup?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
   presentAddress: string;
   permanentAddress: string;
   guardian: Guardian;
@@ -36,3 +38,10 @@ export type Student = {
   profileImg?: string;
   isActive: 'active' | 'block';
 };
+
+
+//creating static method
+
+export interface StudentStaticModel extends Model<TStudent> {
+  isUserExists(id: string): Promise<TStudent | null>;
+}
