@@ -1,31 +1,37 @@
-import { TStudent } from './student.interface'
-import { Student } from './student.model'
+import { TStudent } from './student.interface';
+import { StudentModel } from './student.model';
 
 const createStudentIntoDB = async (studentData: TStudent) => {
   //static method
-  if(await Student.isUserExists(studentData.id)){
-    throw new Error("User Already Exists!")
-  }
-  const result = await Student.create(studentData);
+  // if(await Student.isUserExists(studentData.id)){
+  //   throw new Error("User Already Exists!")
+  // }
+  const result = await StudentModel.create(studentData);
 
-
-
-
-  return result
-}
-
-const getAllStudentsFromDb = async() => {
-  const result = Student.find();
   return result;
-}
+};
 
-const getSingleStudentFromDb = async( id: string) => {
-  const result = Student.findOne({ id });
+const getAllStudentsFromDb = async () => {
+  const result = await StudentModel.find();
   return result;
-}
+};
+
+const getSingleStudentFromDb = async (id: string) => {
+  // const result = await StudentModel.findOne({ id });
+
+  const result = await StudentModel.aggregate([{ $match: { id: id } }]);
+
+  return result;
+};
+
+const deleteSingleStudentFromDb = async (id: string) => {
+  const result = await StudentModel.updateOne({ id }, { isDeleted: true });
+  return result;
+};
 
 export const StudentService = {
   createStudentIntoDB,
   getAllStudentsFromDb,
-  getSingleStudentFromDb
-}
+  getSingleStudentFromDb,
+  deleteSingleStudentFromDb,
+};

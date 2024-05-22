@@ -7,6 +7,8 @@ import {
   UserName,
 } from './student.interface';
 import validator from 'validator';
+import bcrypt from 'bcrypt';
+import config from '../../index';
 
 const userNameValidationSchema = new Schema<UserName>({
   firstName: {
@@ -20,7 +22,7 @@ const userNameValidationSchema = new Schema<UserName>({
           value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
         return firstNameStr === value;
       },
-      message: "{VALUE} is not capitalize"
+      message: '{VALUE} is not capitalize',
     },
   },
   middleName: {
@@ -31,12 +33,11 @@ const userNameValidationSchema = new Schema<UserName>({
     trim: true,
     required: [true, 'Last Name is Required'],
     validate: {
-      validator: function(value: string){
-        return validator.isAlpha(value)
+      validator: function (value: string) {
+        return validator.isAlpha(value);
       },
-      message: "{VALUE} is not valid"
+      message: '{VALUE} is not valid',
     },
-
   },
 });
 
@@ -58,6 +59,11 @@ const localGuardianValidationSchema = new Schema<LocalGuardian>({
 
 const studentValidationSchema = new Schema<TStudent, StudentStaticModel>({
   id: { type: String, required: true, unique: true },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    max: [20, 'Password cannot be more than 20 character'],
+  },
   name: {
     type: userNameValidationSchema,
     required: [true, 'Name is Required'],
@@ -71,15 +77,16 @@ const studentValidationSchema = new Schema<TStudent, StudentStaticModel>({
     required: true,
   },
   dateOfBirth: { type: String },
-  email: { type: String,
-     required: true,
-     validate: {
+  email: {
+    type: String,
+    required: true,
+    validate: {
       validator: (value: string) => {
         return validator.isEmail(value);
       },
-      message: "{VALUE} is not a valid email type"
-     }
+      message: '{VALUE} is not a valid email type',
     },
+  },
   contactNo: { type: String, required: true },
   emergencyContactNo: { type: String, required: true },
   bloodGroup: {
@@ -102,17 +109,57 @@ const studentValidationSchema = new Schema<TStudent, StudentStaticModel>({
     enum: ['active', 'block'],
     default: 'active',
   },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+//pre save middleware / hook : will work on create() save()
+studentValidationSchema.pre('save', async function (next) {
+  //hashing password and save into DB
+
+  //eslint-disable-next-line @typescript-eslint/no-this-alias
+  const user = this;
+  user.password = await bcrypt.hash(
+    user.password,
+    Number(config.bcrypt_salt_rounds),
+  );
+
+  next();
+});
+
+//post save middleware / hook
+studentValidationSchema.post('save', function (doc, next) {
+  doc.password = '';
+  next();
+});
+
+//query middleware
+studentValidationSchema.pre('find', function (next) {
+  this.find({ isDeleted: { $ne: true } });
+  next();
+});
+
+studentValidationSchema.pre('findOne', function (next) {
+  this.find({ isDeleted: { $ne: true } });
+  next();
+});
+
+studentValidationSchema.pre('aggregate', function (next) {
+  this.pipeline().unshift({ $match: { isDeleted: { $ne: true } } });
+  // console.log(this.pipeline());
+  next();
 });
 
 //creating a custom static method
 
-studentValidationSchema.statics.isUserExists = async function(id: string){
-  const existingUser = await Student.findOne({id});
+// studentValidationSchema.statics.isUserExists = async function(id: string){
+//   const existingUser = await Student.findOne({id});
 
-  return existingUser;
-}
-
+//   return existingUser;
+// }
 
 //model
 
-export const Student = model<TStudent>('Student', studentValidationSchema);
+export const StudentModel = model<TStudent>('Student', studentValidationSchema);
